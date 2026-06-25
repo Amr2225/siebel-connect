@@ -406,23 +406,44 @@ export function createMockSiebel(options: { applets: MockAppletDef[] }): MockSie
     GetApplet: (name) => applets.get(name),
   }
 
-  const sApp = {
+  // Members the harness does not model yet throw on use rather than being cast away. This keeps the
+  // `S_App` object a real `SiebelSApp` (no `as unknown as`), so adding a member to the typed boundary
+  // is a compile error here until the mock grows a stub for it (the fidelity rule in the file header).
+  const notInMock =
+    (method: string) =>
+    (): never => {
+      throw new Error(`SiebelApp.S_App.${method} is not modelled by the mock harness yet`)
+    }
+
+  const sApp: SiebelSApp = {
     GetActiveView: () => view,
     NewPropertySet: () => new MockPropertySet(),
     DatumBoolObject: MockBoolObject,
     LocaleObject: makeLocaleObject(),
-  } as unknown as SiebelSApp
+    GetActiveBusObj: notInMock('GetActiveBusObj'),
+    GetPopupPM: notInMock('GetPopupPM'),
+    GetService: notInMock('GetService'),
+    GetPageURL: notInMock('GetPageURL'),
+    GetAppExtension: notInMock('GetAppExtension'),
+    LookupStringCache: notInMock('LookupStringCache'),
+    GetIconMap: notInMock('GetIconMap'),
+    GotoView: notInMock('GotoView'),
+    ProcessNewPopup: notInMock('ProcessNewPopup'),
+  }
 
-  const siebelApp = {
+  const siebelApp: SiebelAppGlobal = {
     S_App: sApp,
     Constants: constants,
-  } as unknown as SiebelAppGlobal
+    EventManager: { addListner: () => {} },
+    CommandManager: { GetInstance: notInMock('CommandManager.GetInstance') },
+    Utils: { Confirm: () => true },
+  }
 
   const siebelJS: SiebelJSGlobal = {
     Dependency: (path) => resolveDependency(path, { SiebelApp: siebelApp }),
   }
 
-  const siebelAppFacade = { ExplorerPresentationModel: {} } as unknown as SiebelAppFacadeGlobal
+  const siebelAppFacade: SiebelAppFacadeGlobal = { ExplorerPresentationModel: {} }
 
   // Snapshot whatever is currently on window so destroy() can restore it exactly.
   const previous = new Map<string, unknown>()
