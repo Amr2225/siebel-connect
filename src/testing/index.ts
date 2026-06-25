@@ -198,11 +198,47 @@ export interface MockAppletDef {
   selection?: number
   inQueryMode?: boolean
   fullId?: string
+  /** `Get('GetWSEndRowNum')` — used by `getPaginationInfo`. Defaults to the record count. */
+  wsEndRowNum?: number
+  /** `ExecuteMethod('GetWSStartRowNum')` — used by `getPaginationInfo`. Defaults to `1`. */
+  wsStartRowNum?: number
+  /** `Get('IsNumRowsKnown')` — drives `getPaginationInfo.hasMore`. Defaults to `true`. */
+  numRowsKnown?: boolean
+  /** Seeds the mock BusComp's `IsInsertPending` (drives `calculateCurrentRecordState` → 1). */
+  insertPending?: boolean
+  /** Seeds the mock BusComp's `IsCommitPending` (drives `calculateCurrentRecordState` → 2). */
+  commitPending?: boolean
   /**
    * Override / extend `ExecuteMethod`. Receives the method name and args; return a value to handle it,
    * or `undefined` to fall through to the built-in defaults.
    */
   executeMethod?: (name: string, args: unknown[]) => unknown
+}
+
+/** Args bag the bridge passes as the 4th `ExecuteMethod('InvokeMethod', name, null, ai)` argument. */
+interface InvokeMethodArgs {
+  async?: boolean
+  cb?: (...args: unknown[]) => unknown
+}
+
+/** Minimal `SiebelBusComp` for `calculateCurrentRecordState` / `getMVF`. */
+class MockBusComp implements SiebelBusComp {
+  constructor(
+    private readonly def: {
+      name: string
+      insertPending?: boolean | undefined
+      commitPending?: boolean | undefined
+    }
+  ) {}
+  GetName(): string {
+    return this.def.name
+  }
+  IsInsertPending(): boolean {
+    return this.def.insertPending ?? false
+  }
+  IsCommitPending(): boolean {
+    return this.def.commitPending ?? false
+  }
 }
 
 type NotificationHandler = (propSet: SiebelPropertySet) => void
@@ -237,12 +273,25 @@ export class MockPresentationModel implements SiebelPresentationModel {
     // `typeof Get('GetListOfColumns') !== 'undefined'` is the bridge's list-vs-form test.
     this.store.set('GetListOfColumns', def.isList ? this.controls : undefined)
     this.store.set('ListOfColumns', listColumns)
+    // The bridge reads `Get('GetControls')` for the full control map (even on list applets).
+    this.store.set('GetControls', this.controls)
     this.store.set('GetRecordSet', records)
     this.store.set('GetRawRecordSet', def.rawRecords ?? records)
     this.store.set('IsInQueryMode', def.inQueryMode ?? false)
     this.store.set('GetRowListRowCount', def.rowListRowCount ?? 10)
     this.store.set('GetNumRows', def.numRows ?? records.length)
     this.store.set('GetSelection', def.selection ?? (records.length > 0 ? 0 : -1))
+    this.store.set('GetWSEndRowNum', def.wsEndRowNum ?? records.length)
+    this.store.set('GetWSStartRowNum', def.wsStartRowNum ?? 1)
+    this.store.set('IsNumRowsKnown', def.numRowsKnown ?? true)
+    this.store.set(
+      'GetBusComp',
+      new MockBusComp({
+        name: `${def.name} BC`,
+        insertPending: def.insertPending,
+        commitPending: def.commitPending,
+      })
+    )
   }
 
   // --- the SiebelPresentationModel surface ---
@@ -256,6 +305,22 @@ export class MockPresentationModel implements SiebelPresentationModel {
     const override = this.def.executeMethod?.(name, args)
     if (override !== undefined) return override
     switch (name) {
+      case 'GetControl':
+        return this.controls[args[0] as string]
+      case 'SetActiveControl':
+        this.activeControl = (args[0] as SiebelControl | null) ?? null
+        return true
+      case 'HandleRowSelect': {
+        const idx = Number(args[0])
+        this.store.set('GetSelection', idx)
+        return true
+      }
+      case 'OnClickSort':
+        return true
+      case 'GetWSStartRowNum':
+        return (this.store.get('GetWSStartRowNum') as number | undefined) ?? 1
+      case 'InvokeMethod':
+        return this.invokeBcMethod(args[0] as string, args[2] as InvokeMethodArgs | undefined)
       case 'GetFieldDataType':
         return 'text'
       case 'CanNavigate':
@@ -268,6 +333,34 @@ export class MockPresentationModel implements SiebelPresentationModel {
         return true
       default:
         return undefined
+    }
+  }
+
+  /**
+   * Simulate `InvokeMethod` for the BC operations the bridge drives. Mirrors real Open UI semantics:
+   * `NewQuery` enters query mode, `ExecuteQuery` exits it and fires the async callback, `WriteRecord`
+   * calls back with a `Completed` status property set (what `writeRecord` inspects).
+   */
+  private invokeBcMethod(method: string, ai?: InvokeMethodArgs): unknown {
+    switch (method) {
+      case 'NewQuery':
+        this.store.set('IsInQueryMode', true)
+        return true
+      case 'ExecuteQuery':
+        this.store.set('IsInQueryMode', false)
+        if (ai?.async && typeof ai.cb === 'function') ai.cb()
+        return true
+      case 'CreateRecord':
+        if (ai?.async && typeof ai.cb === 'function') ai.cb()
+        return true
+      case 'WriteRecord':
+        if (ai?.async && typeof ai.cb === 'function') {
+          ai.cb('WriteRecord', null, makePropertySet({ Status: 'Completed' }))
+        }
+        return true
+      default:
+        // DeleteRecord, UndoRecord, GotoNext/GotoNextSet, …
+        return true
     }
   }
 

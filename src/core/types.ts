@@ -57,6 +57,26 @@ export interface PaginationInfo {
   current: number
 }
 
+/**
+ * Per-applet construction settings. The factory (Phase 9) builds one of these per applet from the
+ * global {@link ConnectSettings} plus the popup-detection flags, then hands it to the `BaseApplet`
+ * constructor. Mirrors the legacy `settings` object read in `NexusBaseApplet`'s constructor.
+ */
+export interface BaseAppletSettings {
+  /** The Presentation Model this applet wraps. Required: the constructor throws without it. */
+  pm: SiebelPresentationModel
+  convertDates?: boolean
+  returnRawNumbers?: boolean
+  returnRawIntegers?: boolean
+  returnRawCurrencies?: boolean
+  /** Set by the factory when the applet is an MVG association applet. */
+  isMvgAssoc?: boolean
+  /** Set by the factory when the applet is a popup applet. */
+  isPopup?: boolean
+  /** Forwarded to {@link Notifications} to attach the noisy debug passthrough handlers. */
+  debug?: boolean
+}
+
 /** Options accepted when initialising the bridge / an applet. */
 export interface ConnectSettings {
   /** Convert Siebel date/time strings to/from JS `Date`. */
@@ -118,3 +138,57 @@ export interface ControlModel {
   /** Present only for static-bounded picklists. */
   options?: string[]
 }
+
+/**
+ * Field-name → owning-control metadata, built once in the constructor by `_getFieldToControlMap`.
+ * Keyed by Siebel field name (not control name). Used to format form-applet record values and to
+ * tell {@link Notifications} which control a changed field belongs to (only `uiType` is read there).
+ */
+export interface FieldControlInfo {
+  name: string
+  isPostChanges: boolean
+  uiType: string
+  displayFormat: string
+  dataType: string
+  currencyCodeField: string
+}
+
+/**
+ * Runtime state of one control for the current record, as produced by `getCurrentRecordModel`. The
+ * `value` is already converted to its JS form (checkbox → boolean, date → `Date`, raw number/currency
+ * → number) by `_getJSValue`.
+ */
+export interface ControlState {
+  value: unknown
+  readonly: boolean
+  isLink: boolean
+  uiType: string
+  label: string
+  isPostChanges: boolean
+  required: boolean
+  maxSize: number
+  fieldName: string
+  displayFormat: string
+  isLOV: boolean
+  dataType: string
+  currencyCodeField: string
+  currencyCode: string
+  name: string
+  iconMap: unknown
+  isListColumn: boolean
+}
+
+/**
+ * The `getCurrentRecordModel` result: a per-control state map (carrying the record `state` and `id`
+ * alongside the control entries, exactly as the legacy object did) plus a method-invocability map.
+ */
+export interface RecordModel {
+  controls: Record<string, ControlState> & { state: CurrentRecordState; id: string }
+  methods: Record<string, boolean>
+}
+
+/**
+ * Result of `getMVF`: `{ [fieldName]: { [requestedFieldGroup]: record[] } }`. Each record is a plain
+ * property-set object with `SSA Primary Field` already converted to a boolean.
+ */
+export type MvfResult = Record<string, Record<string, Array<Record<string, unknown>>>>
