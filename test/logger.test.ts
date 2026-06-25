@@ -68,7 +68,7 @@ describe('logger', () => {
     const { configure, log } = await freshLogger()
     const sink = makeSpyLogger()
     configure({ logger: sink })
-    configure({ debug: true }) // no logger passed — sink must persist
+    configure({ debug: true }) // no logger passed, so the sink must persist
 
     log('still-routed')
     expect(sink.calls.log).toBe(1)
