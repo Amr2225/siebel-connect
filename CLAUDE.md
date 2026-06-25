@@ -23,3 +23,5 @@ To (re)load the full framework, invoke the `second-brain` skill.
 8. **React-only for now.** Core stays framework-agnostic; React hooks live under `./react`. Mind re-renders and the `useSyncExternalStore`-based caching primitive.
 9. **Strong typing is the goal.** No `any` leaks at the public surface; the typed `AppletRegistry` drives inference.
 10. **Live docs (docmd).** Update `docs/` as code is implemented; `docmd.config.json` drives the site.
+11. **NEVER use em dashes (—)** anywhere (code, comments, docs, commits). Use commas, colons, or parentheses.
+12. **NEVER delete any local git branch**, even after it is merged. Keep all local branches.
