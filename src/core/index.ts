@@ -4,3 +4,5 @@
 export type * from './types'
 export * from './errors'
 export { configure, isDebugEnabled, type ConfigureLoggerOptions } from './logger'
+export { default as Notifications, type NotificationsOptions, type FieldToControlMap } from './Notifications'
+export { default as LocaleData } from './LocaleData'
