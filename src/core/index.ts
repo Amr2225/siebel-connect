@@ -1,3 +1,3 @@
-// core barrel — public entry for "siebel-connect".
-// Re-exports wired up across Phases 02–09 as modules land. Placeholder — structure only.
-export {}
+// Public entry for "siebel-connect". Classes, factory, errors, and logger are
+// re-exported here as later phases land. Today it surfaces the type foundation.
+export type * from './types'

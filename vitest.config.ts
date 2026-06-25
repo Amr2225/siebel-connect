@@ -9,5 +9,10 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "lcov"],
     },
+    typecheck: {
+      enabled: true,
+      include: ["test/**/*.test-d.ts"],
+      tsconfig: "./tsconfig.json",
+    },
   },
 })

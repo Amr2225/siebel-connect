@@ -1,4 +1,4 @@
-# siebel-connect
+# Overview
 
 A fully-typed, **React-first** bridge to Siebel Open UI's Business Component (BC) layer.
 
@@ -12,11 +12,11 @@ keeps the original runtime behaviour and adds:
 
 ## Entry points
 
-| Import | Contents |
-| ------ | -------- |
-| `siebel-connect` | Core applet classes + typed factory (framework-agnostic) |
-| `siebel-connect/react` | React adapter hooks |
-| `siebel-connect/testing` | In-memory Siebel mock harness |
+| Import                          | Contents                                                          |
+| ------------------------------- | ----------------------------------------------------------------- |
+| `siebel-connect`                | Core applet classes + typed factory (framework-agnostic)          |
+| `siebel-connect/react`          | React adapter hooks                                               |
+| `siebel-connect/testing`        | In-memory Siebel mock harness                                     |
 | `siebel-connect/siebel-globals` | Ambient `window.SiebelApp` / `SiebelJS` / `SiebelAppFacade` types |
 
 ## Status
