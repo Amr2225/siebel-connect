@@ -1,0 +1,14 @@
+{
+  "title": "siebel-connect",
+  "src": "docs",
+  "out": "site",
+  "base": "/",
+  "layout": {
+    "spa": true,
+    "sidebar": { "collapsible": true },
+    "optionsMenu": { "components": { "search": true, "themeSwitch": true } }
+  },
+  "autoTitleFromH1": true,
+  "copyCode": true,
+  "pageNavigation": true
+}
