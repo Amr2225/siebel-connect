@@ -4,7 +4,9 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "paths": {
-      "siebel-connect": ["./src/core/index.ts"]
+      "siebel-connect": ["./src/core/index.ts"],
+      "siebel-connect/react": ["./src/react/index.ts"],
+      "siebel-connect/testing": ["./src/testing/index.ts"]
     },
     "lib": ["ES2021", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
