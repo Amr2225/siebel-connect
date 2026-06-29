@@ -31,8 +31,8 @@ resolves once Siebel finishes loading the popup (see [`PopupController`](./popup
 | `showExportApplet(hide, cb?)` | export | Routes through the controller's export command. |
 | `changeRecords(hide, cb?)` | `ChangeRecords` | |
 | `openAssocApplet(hide, cb?)` | assoc | For M:M child BCs; needs `NewRecord` invocable. |
-| `closePopupApplet(nb?)` | — | Closes the given (or last NB-opened) popup. |
-| `reInitPopup()` / `static ReInitPopup()` | — | Re-initialise the popup PM lifecycle. |
+| `closePopupApplet(nb?)` | n/a | Closes the given (or last NB-opened) popup. |
+| `reInitPopup()` / `static ReInitPopup()` | n/a | Re-initialise the popup PM lifecycle. |
 
 ## Navigation & drilldown
 

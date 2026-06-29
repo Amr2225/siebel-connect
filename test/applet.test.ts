@@ -149,6 +149,33 @@ describe('Applet: popup open guards', () => {
   })
 })
 
+describe('Applet: popup delegations', () => {
+  it('opens the export applet when no popup is pending', () => {
+    setup()
+    const applet = makeApplet('MVG Form Applet')
+    // hide = false returns true synchronously after the controller fires the export command.
+    expect(applet.showExportApplet(false)).toBe(true)
+  })
+
+  it('opens the association applet when NewRecord is available', () => {
+    setup()
+    const applet = makeApplet('MVG Form Applet')
+    // hide = false: _openAssocApplet kicks off the new-record promise and returns true synchronously.
+    expect(applet.openAssocApplet(false)).toBe(true)
+  })
+})
+
+describe('Applet: drilldownPromised', () => {
+  it('resolves once the target view loads', async () => {
+    const s = setup()
+    const applet = makeApplet('Account List Applet')
+    const promise = applet.drilldownPromised('Name')
+    // No targetViewName is set for a drilldown, so refreshview resolves it true.
+    s.fireEvent('refreshview')
+    await expect(promise).resolves.toBe(true)
+  })
+})
+
 describe('Applet: drilldown', () => {
   it('fires the list drilldown event with the control name and selected index', () => {
     const s = setup()
