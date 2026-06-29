@@ -170,8 +170,22 @@ interface SiebelJSGlobal {
   Dependency(path: string): unknown
 }
 
+/**
+ * A bridge applet instance as registered in `SiebelAppFacade.NB` and tracked by the popup controller.
+ * Structurally satisfied by `BaseApplet` (and its `PopupApplet` subclass); declared here so the
+ * ambient boundary can name it without importing the class.
+ */
+interface NexusBridgeInstance {
+  readonly pm: SiebelPresentationModel
+  readonly appletName: string
+  // `| undefined` (not just optional): the bridge classes type these as `boolean | undefined`, which
+  // is only assignable here under exactOptionalPropertyTypes when the target also admits `undefined`.
+  readonly isPopup?: boolean | undefined
+  readonly isMvgAssoc?: boolean | undefined
+}
+
 interface SiebelAppFacadeGlobal {
-  NB?: Record<string, { isPopup?: boolean; isMvgAssoc?: boolean }>
+  NB?: Record<string, NexusBridgeInstance>
   NexusProcessNewPopup?: (propSet: SiebelPropertySet) => unknown
   ExplorerPresentationModel?: unknown
   _NBPopupController?: unknown

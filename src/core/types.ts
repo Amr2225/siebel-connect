@@ -42,6 +42,36 @@ export type SubscriptionToken = (string | number) & { readonly [subscriptionToke
 export type PopupType = 'pick' | 'mvg' | 'mvgassoc' | 'assoc' | 'popup' | null
 
 /**
+ * Result of {@link PopupController.IsPopupOpen}: whether a popup is open and, if so, the Siebel
+ * applet object(s) in `currPopups`. A shuttle (two `currPopups`) surfaces the MVG applet as `applet`
+ * and the association applet as `assocApplet`, matching the legacy `0 = mvg` assumption.
+ */
+export interface PopupOpenState {
+  isOpen?: boolean
+  applet?: SiebelApplet
+  appletName?: string
+  assocApplet?: SiebelApplet
+  assocAppletName?: string
+}
+
+/**
+ * Payload the popup/`showPopupApplet` promise resolves with once Siebel finishes loading the popup:
+ * the Siebel applet object(s) plus the matching bridge instances tracked from `SiebelAppFacade.NB`.
+ *
+ * The optional fields are `| undefined` (not just optional) because the legacy resolve object sets
+ * every key explicitly, leaving the association entries `undefined` for a single-applet popup. Under
+ * `exactOptionalPropertyTypes`, that explicit `undefined` is only assignable to a `| undefined` type.
+ */
+export interface PopupResolution {
+  appletName?: string | undefined
+  applet?: SiebelApplet | undefined
+  assocAppletName?: string | undefined
+  assocApplet?: SiebelApplet | undefined
+  nexusPopupApplet: NexusBridgeInstance | null
+  nexusAssocApplet: NexusBridgeInstance | null
+}
+
+/**
  * State of the applet's current record:
  * `0` no records · `1` being created · `2` being edited · `3` query mode ·
  * `4` displayed · `5` read-only.
