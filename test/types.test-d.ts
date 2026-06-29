@@ -25,8 +25,11 @@ describe('registry inference', () => {
     expectTypeOf<RecordOf<'accountList'>>().toEqualTypeOf<Account>()
   })
 
-  it('AppletKey is the union of registered keys', () => {
-    expectTypeOf<AppletKey>().toEqualTypeOf<'accountList'>()
+  it('a registered key is a member of AppletKey', () => {
+    // Membership, not exact-union: other test files augment the registry too, so AppletKey is the
+    // union of every registered key across the program. Asserting equality here would make this test
+    // brittle to any new augmentation.
+    expectTypeOf<'accountList'>().toMatchTypeOf<AppletKey>()
   })
 
   it('SiebelRecord.Id is a string', () => {
