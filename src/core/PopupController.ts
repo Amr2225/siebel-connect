@@ -37,8 +37,8 @@ type ViewReject = (reason?: unknown) => void
  */
 export default class PopupController {
   readonly consts: SiebelConstants
-  /** Forwarded to `_createNexusInstance`; unset by the legacy controller, kept for parity. */
-  readonly settings?: Partial<BaseAppletSettings>
+  /** Forwarded to `_createNexusInstance`; merged in by the `Applet` constructor (legacy `Nexus`). */
+  settings?: Partial<BaseAppletSettings>
 
   isPopupHidden: boolean
   resolvePromise: PopupResolve | null
