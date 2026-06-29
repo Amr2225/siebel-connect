@@ -472,15 +472,16 @@ export default class BaseApplet<TRecord extends SiebelRecord = SiebelRecord> {
     return this.pm.Get('GetSelection') as number
   }
 
-  nextRecord(options: InvokeOptions = {}): boolean | Promise<unknown> | unknown {
-    return this.invokeMethod(this.isListApplet ? 'GotoNext' : 'GotoNextSet', options)
+  nextRecord({ async }: InvokeOptions = {}): boolean | Promise<unknown> | unknown {
+    // Parity: legacy forwards only `async` to invokeMethod (`{ async }`), never the caller's `cb`.
+    return this.invokeMethod(this.isListApplet ? 'GotoNext' : 'GotoNextSet', { async: !!async })
   }
 
-  nextRecordSet(options: InvokeOptions = {}): boolean | Promise<unknown> | unknown {
+  nextRecordSet({ async }: InvokeOptions = {}): boolean | Promise<unknown> | unknown {
     if (!this.isListApplet) {
       return false
     }
-    return this.invokeMethod('GotoNextSet', options)
+    return this.invokeMethod('GotoNextSet', { async: !!async })
   }
 
   positionOnRow(
@@ -542,19 +543,19 @@ export default class BaseApplet<TRecord extends SiebelRecord = SiebelRecord> {
     return ret // true if success, false is positioning not happened
   }
 
-  prevRecord(options: InvokeOptions = {}): boolean | Promise<unknown> | unknown {
+  prevRecord({ async }: InvokeOptions = {}): boolean | Promise<unknown> | unknown {
     if (this.isListApplet) {
       // return this.positionOnRow(this.pm.Get('GetSelection') - 1)
-      return this.invokeMethod('GotoPrevious', options)
+      return this.invokeMethod('GotoPrevious', { async: !!async })
     }
-    return this.invokeMethod('GotoPreviousSet', options)
+    return this.invokeMethod('GotoPreviousSet', { async: !!async })
   }
 
-  prevRecordSet(options: InvokeOptions = {}): boolean | Promise<unknown> | unknown {
+  prevRecordSet({ async }: InvokeOptions = {}): boolean | Promise<unknown> | unknown {
     if (!this.isListApplet) {
       return false
     }
-    return this.invokeMethod('GotoPreviousSet', options)
+    return this.invokeMethod('GotoPreviousSet', { async: !!async })
   }
 
   newRecord(cb?: (value: unknown) => unknown): Promise<unknown> {

@@ -3,8 +3,13 @@
 // state, sort, pagination, and the value-conversion round-trips. The assertions encode the legacy
 // behaviour the port must preserve, not the implementation.
 import { describe, it, expect, afterEach } from 'vitest'
-import { BaseApplet, PositionError, ConnectError } from 'siebel-connect'
-import { createMockSiebel, type MockAppletDef } from 'siebel-connect/testing'
+import { BaseApplet, PositionError, ConnectError, QueryModeError } from 'siebel-connect'
+import {
+  createMockSiebel,
+  makePropertySet,
+  MockPropertySet,
+  type MockAppletDef,
+} from 'siebel-connect/testing'
 import { accountListFixture, contactFormFixture } from './fixtures/applets'
 
 let siebel: ReturnType<typeof createMockSiebel> | undefined
@@ -13,11 +18,19 @@ afterEach(() => {
   siebel = undefined
 })
 
+/** Construction flags forwarded to the BaseApplet (drive the value-conversion paths). */
+type AppletFlags = {
+  convertDates?: boolean
+  returnRawNumbers?: boolean
+  returnRawIntegers?: boolean
+  returnRawCurrencies?: boolean
+}
+
 /** Build a BaseApplet over a freshly-installed mock for the given applets. */
-function makeApplet(def: MockAppletDef, others: MockAppletDef[] = []) {
+function makeApplet(def: MockAppletDef, others: MockAppletDef[] = [], flags: AppletFlags = {}) {
   siebel = createMockSiebel({ applets: [def, ...others] })
   const pm = siebel.getPM(def.name)
-  const applet = new BaseApplet({ pm })
+  const applet = new BaseApplet({ pm, ...flags })
   return { siebel: siebel!, pm, applet }
 }
 
@@ -234,5 +247,136 @@ describe('BaseApplet: value conversion round-trips', () => {
   it('non-checkbox values coerce to string on the way to Siebel', () => {
     const { applet } = makeApplet(accountListFixture)
     expect(applet._getSiebelValue(42, 'Text')).toBe('42')
+  })
+})
+
+describe('BaseApplet: date/number/currency conversion', () => {
+  // Identity-mapped by the mock consts; SWE_CTRL_DATE_PICK is a date-time control.
+  const DATE = 'SWE_CTRL_DATE_PICK'
+
+  it('convertDates: a non-Date value for a date control throws ConnectError', () => {
+    const { applet } = makeApplet(contactFormFixture, [], { convertDates: true })
+    expect(() => applet._getSiebelValue('not-a-date', DATE, 'M/D/YYYY')).toThrow(ConnectError)
+    expect(() => applet._getSiebelValue('not-a-date', DATE, 'M/D/YYYY')).toThrow(
+      'value is expected to be a date'
+    )
+  })
+
+  it('convertDates: an empty string from a date control reads back as null', () => {
+    const { applet } = makeApplet(contactFormFixture, [], { convertDates: true })
+    expect(applet._getJSValue('', { uiType: DATE, dataType: 'text', displayFormat: 'M/D/YYYY' })).toBeNull()
+  })
+
+  it('returnRawNumbers: routes a number through FormattedToString (group separators stripped)', () => {
+    const { applet } = makeApplet(accountListFixture, [], { returnRawNumbers: true })
+    expect(applet._getJSValue('1,234', { uiType: 'Text', dataType: 'number', displayFormat: '' })).toBe(
+      '1234'
+    )
+  })
+
+  it('returnRawCurrencies: applies the currency code then FormattedToString', () => {
+    const { applet } = makeApplet(accountListFixture, [], { returnRawCurrencies: true })
+    expect(
+      applet._getJSValue('1,000', {
+        uiType: 'Text',
+        dataType: 'currency',
+        displayFormat: '',
+        currencyCode: 'USD',
+      })
+    ).toBe('1000')
+  })
+})
+
+describe('BaseApplet: query family', () => {
+  it('queryBySearchExprSync runs a query and returns the record count', () => {
+    const { applet, pm } = makeApplet(accountListFixture)
+    expect(applet.queryBySearchExprSync('Name="Acme"')).toBe(3)
+    expect(pm.Get('IsInQueryMode')).toBe(false) // ExecuteQuery exits query mode
+  })
+
+  it('queryByIdSync accepts a single id and an array of ids', () => {
+    const { applet } = makeApplet(accountListFixture)
+    expect(applet.queryByIdSync('1-A')).toBe(3)
+    expect(applet.queryByIdSync(['1-A', '1-B'])).toBe(3)
+  })
+
+  it('query (async) resolves with the record count', async () => {
+    const { applet } = makeApplet(accountListFixture)
+    await expect(applet.query({ Name: 'Acme' })).resolves.toBe(3)
+  })
+
+  it('queryById (async) resolves with the record count', async () => {
+    const { applet } = makeApplet(accountListFixture)
+    await expect(applet.queryById('1-A')).resolves.toBe(3)
+  })
+
+  it('_newQuery short-circuits to false when already in query mode and checkQueryMode is set', () => {
+    const { applet, pm } = makeApplet(accountListFixture)
+    pm.set('IsInQueryMode', true)
+    expect(applet._newQuery(true)).toBe(false)
+  })
+
+  it('_newQuery throws QueryModeError when the applet fails to enter query mode', () => {
+    siebel = createMockSiebel({
+      applets: [
+        {
+          ...accountListFixture,
+          // NewQuery is acknowledged but does not flip the PM into query mode.
+          executeMethod: (name, args) =>
+            name === 'InvokeMethod' && args[0] === 'NewQuery' ? true : undefined,
+        },
+      ],
+    })
+    const applet = new BaseApplet({ pm: siebel.getPM('Account List Applet') })
+    expect(() => applet._newQuery()).toThrow(QueryModeError)
+  })
+})
+
+describe('BaseApplet: getMVF', () => {
+  it('resolves the ResultSet tree with SSA Primary Field converted to boolean', async () => {
+    // Mock the "Nexus BS" business service: build the nested ResultSet the bridge walks
+    // (field -> requested-field-group -> records) and fire the async callback.
+    const nexusBs: SiebelService = {
+      InvokeMethod(method, inputs, opts) {
+        const ai = opts as { cb: (m: string, i: SiebelPropertySet, o: SiebelPropertySet) => void }
+        const record = makePropertySet({ Id: '2-A', 'SSA Primary Field': 'Y' })
+        const fieldGroup = makePropertySet({}, 'Account')
+        fieldGroup.AddChild(record)
+        const field = makePropertySet({}, 'First Name')
+        field.AddChild(fieldGroup)
+        const resultSet = makePropertySet({}, 'ResultSet')
+        resultSet.AddChild(field)
+        const outputs = new MockPropertySet()
+        outputs.AddChild(resultSet)
+        ai.cb(method, inputs, outputs)
+        return true
+      },
+    }
+    siebel = createMockSiebel({ applets: [contactFormFixture], services: { 'Nexus BS': nexusBs } })
+    const applet = new BaseApplet({ pm: siebel.getPM('Contact Form Applet') })
+
+    const mvf = await applet.getMVF(['2-A'], { FirstName: ['Account'] }, false)
+    expect(mvf).toEqual({ 'First Name': { Account: [{ Id: '2-A', 'SSA Primary Field': true }] } })
+  })
+})
+
+describe('BaseApplet: getCurrentRecordModel', () => {
+  it('assembles state, id, controls and methods for a displayed record', () => {
+    const { applet } = makeApplet(contactFormFixture)
+    const model = applet.getCurrentRecordModel()
+    expect(model.controls.state).toBe(4)
+    expect(model.controls.id).toBe('2-A')
+    expect(model.controls.Id).toMatchObject({ value: '2-A' })
+    expect(model.controls.FirstName).toMatchObject({ name: 'FirstName', readonly: false })
+    expect(model.methods).toEqual({})
+  })
+
+  it('keeps controls editable and clears the Id value in query mode (state 3)', () => {
+    const { applet, pm } = makeApplet(contactFormFixture)
+    pm.set('IsInQueryMode', true)
+    const model = applet.getCurrentRecordModel()
+    expect(model.controls.state).toBe(3)
+    expect(model.controls.FirstName).toMatchObject({ readonly: false })
+    expect(model.controls.Id).toMatchObject({ value: '' })
   })
 })

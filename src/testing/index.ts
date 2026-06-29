@@ -480,10 +480,15 @@ const WINDOW_KEYS = ['SiebelApp', 'SiebelJS', 'SiebelAppFacade'] as const
  * siebel.destroy()
  * ```
  */
-export function createMockSiebel(options: { applets: MockAppletDef[] }): MockSiebel {
+export function createMockSiebel(options: {
+  applets: MockAppletDef[]
+  /** Business services the bridge resolves via `S_App.GetService(name)` (e.g. `'Nexus BS'` for `getMVF`). */
+  services?: Record<string, SiebelService>
+}): MockSiebel {
   const constants = new MockConstants()
   const pms = new Map<string, MockPresentationModel>()
   const applets = new Map<string, SiebelApplet>()
+  const services = options.services ?? {}
 
   for (const def of options.applets) {
     const pm = new MockPresentationModel(def)
@@ -513,9 +518,13 @@ export function createMockSiebel(options: { applets: MockAppletDef[] }): MockSie
     NewPropertySet: () => new MockPropertySet(),
     DatumBoolObject: MockBoolObject,
     LocaleObject: makeLocaleObject(),
-    GetActiveBusObj: notInMock('GetActiveBusObj'),
+    GetActiveBusObj: () => ({ GetName: () => 'Mock BO' }),
     GetPopupPM: notInMock('GetPopupPM'),
-    GetService: notInMock('GetService'),
+    GetService: (name) => {
+      const service = services[name]
+      if (service) return service
+      throw new Error(`SiebelApp.S_App.GetService(${name}) is not modelled by the mock harness yet`)
+    },
     GetPageURL: notInMock('GetPageURL'),
     GetAppExtension: notInMock('GetAppExtension'),
     LookupStringCache: notInMock('LookupStringCache'),
@@ -578,11 +587,15 @@ function resolveDependency(path: string, root: Record<string, unknown>): unknown
   return current
 }
 
-/** Minimal locale object: returns inputs unchanged. Real formatting lands with Phase 05 (LocaleData). */
+/**
+ * Minimal locale object. `FormattedToString` strips group separators (`'1,234' -> '1234'`) to emulate the
+ * real locale-formatted -> canonical conversion the raw-number/currency paths rely on; `GetStringFromDateTime`
+ * stays a passthrough (faithful Siebel date math is out of scope, so date tests assert bridge-owned branches).
+ */
 function makeLocaleObject(): SiebelLocaleObject {
   return {
     GetStringFromDateTime: (value) => value,
-    FormattedToString: (_dataType, value) => value,
+    FormattedToString: (_dataType, value) => value.replace(/,/g, ''),
     SetCurrencyCode: () => {},
     GetProfile: () => '',
     GetWeekStartDay: () => 0,
