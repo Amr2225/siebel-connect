@@ -7,3 +7,5 @@ export { configure, isDebugEnabled, type ConfigureLoggerOptions } from './logger
 export { default as Notifications, type NotificationsOptions, type FieldToControlMap } from './Notifications'
 export { default as LocaleData } from './LocaleData'
 export { default as BaseApplet } from './BaseApplet'
+export { default as PopupApplet } from './PopupApplet'
+export { default as PopupController } from './PopupController'

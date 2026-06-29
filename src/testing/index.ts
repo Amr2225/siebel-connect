@@ -34,6 +34,10 @@ export const KNOWN_CONSTANTS = [
   'SWE_CTRL_PICK',
   'SWE_CTRL_COMBOBOX',
   'SWE_CTRL_TEXT',
+  // Popup PM lifecycle states the PopupController reads/writes (Phase 07).
+  'POPUP_STATE_UNLOADED',
+  'POPUP_STATE_VISIBLE',
+  'POPUP_STATE_HIDDEN',
 ] as const
 
 class MockConstants implements SiebelConstants {
@@ -269,7 +273,9 @@ export class MockPresentationModel implements SiebelPresentationModel {
     }
 
     this.store.set('GetName', def.name)
-    this.store.set('GetFullId', def.fullId ?? `s_${def.name.replace(/\s+/g, '_')}`)
+    // `def.name ?? 'applet'` keeps `reInitPopupPM`'s `popupPM.constructor({ GetName })` re-run (which
+    // passes a def without `name`) from throwing; real fixtures always set `name`, so behaviour is unchanged.
+    this.store.set('GetFullId', def.fullId ?? `s_${(def.name ?? 'applet').replace(/\s+/g, '_')}`)
     // `typeof Get('GetListOfColumns') !== 'undefined'` is the bridge's list-vs-form test.
     this.store.set('GetListOfColumns', def.isList ? this.controls : undefined)
     this.store.set('ListOfColumns', listColumns)
@@ -464,6 +470,15 @@ export interface MockSiebel {
   getPM(appletName: string): MockPresentationModel
   /** Emit a notification batch (`BEGIN -> ... -> END`) on one applet's PM. */
   emitBatch(appletName: string, notifications: MockNotification[]): void
+  /** The shared popup PM returned by `S_App.GetPopupPM()` (drives the PopupController, Phase 07). */
+  getPopupPM(): MockPresentationModel
+  /**
+   * Set the popup PM's `currPopups` from applet names (`0` = MVG, `1` = association, per Open UI).
+   * Drives `PopupController.IsPopupOpen`.
+   */
+  setCurrPopups(appletNames: string[]): void
+  /** Fire a Siebel `EventManager` event (e.g. `'refreshpopup'`, `'refreshview'`) to its listeners. */
+  fireEvent(event: string, ...args: unknown[]): void
   /** Remove the installed globals and restore whatever was there before. */
   destroy(): void
 }
@@ -489,6 +504,15 @@ export function createMockSiebel(options: {
   const pms = new Map<string, MockPresentationModel>()
   const applets = new Map<string, SiebelApplet>()
   const services = options.services ?? {}
+
+  // Shared popup PM the PopupController drives (Phase 07). Seeded "unloaded" with no open popups, so
+  // the controller's constructor takes its first-load `Setup()` path and `IsPopupOpen` reports closed.
+  const popupPM = new MockPresentationModel({ name: 'PopupPxy' })
+  popupPM.set('state', 'POPUP_STATE_UNLOADED')
+  popupPM.set('currPopups', [])
+
+  // Captured `EventManager` listeners, replayed by `fireEvent` with their registered scope.
+  const eventListeners = new Map<string, Array<{ handler: (...args: unknown[]) => void; scope?: unknown }>>()
 
   for (const def of options.applets) {
     const pm = new MockPresentationModel(def)
@@ -519,25 +543,32 @@ export function createMockSiebel(options: {
     DatumBoolObject: MockBoolObject,
     LocaleObject: makeLocaleObject(),
     GetActiveBusObj: () => ({ GetName: () => 'Mock BO' }),
-    GetPopupPM: notInMock('GetPopupPM'),
+    GetPopupPM: () => popupPM,
     GetService: (name) => {
       const service = services[name]
       if (service) return service
       throw new Error(`SiebelApp.S_App.GetService(${name}) is not modelled by the mock harness yet`)
     },
-    GetPageURL: notInMock('GetPageURL'),
-    GetAppExtension: notInMock('GetAppExtension'),
+    GetPageURL: () => 'https://mock.siebel/',
+    GetAppExtension: () => '.swe',
     LookupStringCache: notInMock('LookupStringCache'),
     GetIconMap: notInMock('GetIconMap'),
     GotoView: notInMock('GotoView'),
-    ProcessNewPopup: notInMock('ProcessNewPopup'),
+    // Default no-op the PopupController stashes as `NexusProcessNewPopup` and then wraps.
+    ProcessNewPopup: () => undefined,
   }
 
   const siebelApp: SiebelAppGlobal = {
     S_App: sApp,
     Constants: constants,
-    EventManager: { addListner: () => {} },
-    CommandManager: { GetInstance: notInMock('CommandManager.GetInstance') },
+    EventManager: {
+      addListner(event, handler, scope) {
+        const list = eventListeners.get(event) ?? []
+        list.push({ handler, scope })
+        eventListeners.set(event, list)
+      },
+    },
+    CommandManager: { GetInstance: () => ({ InvokeCommand: () => undefined }) },
     Utils: { Confirm: () => true },
   }
 
@@ -564,6 +595,20 @@ export function createMockSiebel(options: {
     },
     emitBatch(appletName, notifications) {
       this.getPM(appletName).emitBatch(notifications)
+    },
+    getPopupPM() {
+      return popupPM
+    },
+    setCurrPopups(appletNames) {
+      const popups = appletNames.map<SiebelApplet>((name) => ({
+        GetName: () => name,
+        GetPModel: () => popupPM,
+      }))
+      popupPM.set('currPopups', popups)
+    },
+    fireEvent(event, ...args) {
+      const listeners = eventListeners.get(event) ?? []
+      for (const { handler, scope } of listeners) handler.call(scope, ...args)
     },
     destroy() {
       for (const key of WINDOW_KEYS) {
