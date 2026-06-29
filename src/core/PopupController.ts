@@ -1,4 +1,4 @@
-// PopupController.ts — popup controller singleton (was `NexusPopupController`).
+// PopupController.ts: popup controller singleton (was `NexusPopupController`).
 //
 // Phase 07 port, translated call-for-call from `_legacy/nexus-bridge/src/NexusPopupController.js`.
 // This is the highest-risk module in the bridge: the `ProcessNewPopup` monkey-patch and the

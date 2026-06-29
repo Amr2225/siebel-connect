@@ -2,7 +2,7 @@
 // highest-risk module in the bridge, so these exercise the observable contract: the Symbol-enforced
 // singleton, `IsPopupOpen` for 0/1/2 `currPopups`, `canOpenPopup` gating, the hidden-popup resolve
 // flow (showPopupApplet -> refreshpopup -> promise resolves), and the `closePopupApplet` guards.
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import {
   PopupController,
   PopupApplet,
@@ -11,7 +11,7 @@ import {
   ConnectError,
   type PopupResolution,
 } from 'siebel-connect'
-import { createMockSiebel, type MockAppletDef } from 'siebel-connect/testing'
+import { createMockSiebel, makePropertySet, type MockAppletDef } from 'siebel-connect/testing'
 import { accountListFixture } from './fixtures/applets'
 
 let siebel: ReturnType<typeof createMockSiebel> | undefined
@@ -144,5 +144,58 @@ describe('PopupController: closePopupApplet', () => {
     expect(() => ctrl.closePopupApplet()).toThrow(
       '[NB]The popup applet was not opened by NB and "nb" is not provided'
     )
+  })
+})
+
+describe('PopupController: ProcessNewPopup interception', () => {
+  it('routes the hidden path through processNewPopup: clears currPopups, marks visible, rewrites the URL', () => {
+    const s = setup()
+    const ctrl = PopupController.instance
+    const popupPM = s.getPopupPM()
+    s.setCurrPopups(['Stale Popup'])
+    ctrl.isPopupHidden = true
+
+    // The controller monkey-patched S_App.ProcessNewPopup at construction; invoke the wrapper.
+    const ret = window.SiebelApp.S_App.ProcessNewPopup(
+      makePropertySet({ URL: 'http://host/start.swe?SWECmd= X' })
+    )
+
+    expect(ret).toBe('refreshpopup')
+    expect(ctrl.isPopupHidden).toBe(false) // wrapper resets the flag before delegating
+    expect(popupPM.Get('currPopups')).toEqual([])
+    expect(popupPM.Get('state')).toBe('POPUP_STATE_VISIBLE')
+    expect(popupPM.Get('url')).toBe('https://mock.siebel/?SWECmd= X')
+  })
+
+  it('delegates to the stashed original when no popup is hidden', () => {
+    setup()
+    void PopupController.instance // construct + install the wrapper
+    const original = vi.fn(() => 'original-result')
+    window.SiebelAppFacade.NexusProcessNewPopup = original
+
+    const ret = window.SiebelApp.S_App.ProcessNewPopup(makePropertySet({ URL: 'x' }))
+
+    expect(original).toHaveBeenCalledOnce()
+    expect(ret).toBe('original-result')
+  })
+})
+
+// NOTE: `reInitPopupPM` is intentionally not unit-tested. Its verbatim `popupPM.constructor({ GetName })`
+// re-init call relies on Siebel's ES5 function-style PM constructor (callable without `new`); the mock's
+// ES6 `MockPresentationModel` class throws "cannot be invoked without 'new'". Covering it would require a
+// function-based popup PM in the harness. The method is ported verbatim and the spec's Tests list does
+// not mandate it; tracked as a follow-up harness improvement.
+
+describe('PopupController: checkOpenedPopup', () => {
+  it('returns false when nothing is open', () => {
+    setup()
+    expect(PopupController.instance.checkOpenedPopup(true)).toBe(false)
+  })
+
+  it('returns isOpen without closing when closeIfOpen is falsy', () => {
+    const s = setup()
+    s.setCurrPopups(['Pick Applet'])
+    // closeIfOpen omitted: reports open, does not route into closePopupApplet.
+    expect(PopupController.instance.checkOpenedPopup()).toBe(true)
   })
 })

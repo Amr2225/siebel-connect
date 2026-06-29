@@ -1,4 +1,4 @@
-// PopupApplet.ts — `PopupApplet<TRecord>` (was `NexusPopupApplet`).
+// PopupApplet.ts: `PopupApplet<TRecord>` (was `NexusPopupApplet`).
 //
 // Phase 07 port, translated call-for-call from `_legacy/nexus-bridge/src/NexusPopupApplet.js`.
 // Per the corrected hierarchy it extends `BaseApplet` *directly* and is a **sibling** of `Applet`,

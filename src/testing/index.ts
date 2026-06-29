@@ -273,9 +273,7 @@ export class MockPresentationModel implements SiebelPresentationModel {
     }
 
     this.store.set('GetName', def.name)
-    // `def.name ?? 'applet'` keeps `reInitPopupPM`'s `popupPM.constructor({ GetName })` re-run (which
-    // passes a def without `name`) from throwing; real fixtures always set `name`, so behaviour is unchanged.
-    this.store.set('GetFullId', def.fullId ?? `s_${(def.name ?? 'applet').replace(/\s+/g, '_')}`)
+    this.store.set('GetFullId', def.fullId ?? `s_${def.name.replace(/\s+/g, '_')}`)
     // `typeof Get('GetListOfColumns') !== 'undefined'` is the bridge's list-vs-form test.
     this.store.set('GetListOfColumns', def.isList ? this.controls : undefined)
     this.store.set('ListOfColumns', listColumns)
