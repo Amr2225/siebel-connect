@@ -9,10 +9,17 @@ afterEach(() => {
   siebel = undefined
 })
 
-function makeNotifications() {
+function makeNotifications(
+  opts: { fieldToControlMap?: Record<string, { uiType: string }>; debug?: boolean } = {}
+) {
   siebel = createMockSiebel({ applets: [accountListFixture] })
   const pm = siebel.getPM('Account List Applet')
-  const notif = new Notifications({ pm, consts: siebel.constants, fieldToControlMap: {} })
+  const notif = new Notifications({
+    pm,
+    consts: siebel.constants,
+    fieldToControlMap: opts.fieldToControlMap ?? {},
+    ...(opts.debug !== undefined ? { debug: opts.debug } : {}),
+  })
   return { siebel, pm, notif }
 }
 
@@ -108,5 +115,61 @@ describe('Notifications: cp-state MVG/PICK skip', () => {
       { type: 'SWE_PROP_BC_NOTI_STATE_CHANGED', props: { state: 'cp' } },
     ])
     expect(sub).toHaveBeenCalledOnce()
+  })
+})
+
+describe('Notifications: per-type accept handlers', () => {
+  it('accepts NEW_ACTIVE_ROW and DELETE_RECORD unconditionally', () => {
+    const { notif } = makeNotifications()
+    const sub = vi.fn()
+    notif.subscribe(sub)
+    siebel!.emitBatch('Account List Applet', [{ type: 'SWE_PROP_BC_NOTI_NEW_ACTIVE_ROW' }])
+    siebel!.emitBatch('Account List Applet', [{ type: 'SWE_PROP_BC_NOTI_DELETE_RECORD' }])
+    expect(sub).toHaveBeenCalledTimes(2)
+  })
+
+  it('accepts NEW_DATA_WS only when its field maps to a non-MVG control', () => {
+    const { notif } = makeNotifications({ fieldToControlMap: { Name: { uiType: 'SWE_CTRL_TEXT' } } })
+    const sub = vi.fn()
+    notif.subscribe(sub)
+    siebel!.emitBatch('Account List Applet', [
+      { type: 'SWE_PROP_BC_NOTI_NEW_DATA_WS', props: { SWE_PROP_NOTI_FIELD: 'Name' } },
+    ])
+    expect(sub).toHaveBeenCalledOnce()
+  })
+
+  it('skips NEW_DATA_WS when its field maps to an MVG control', () => {
+    const { notif } = makeNotifications({ fieldToControlMap: { Name: { uiType: 'SWE_CTRL_MVG' } } })
+    const sub = vi.fn()
+    notif.subscribe(sub)
+    siebel!.emitBatch('Account List Applet', [
+      { type: 'SWE_PROP_BC_NOTI_NEW_DATA_WS', props: { SWE_PROP_NOTI_FIELD: 'Name' } },
+    ])
+    expect(sub).not.toHaveBeenCalled()
+    expect(notif.skippedNotifications).toHaveLength(1)
+  })
+
+  it('skips NEW_DATA_WS when the field maps to no control', () => {
+    const { notif } = makeNotifications()
+    const sub = vi.fn()
+    notif.subscribe(sub)
+    siebel!.emitBatch('Account List Applet', [
+      { type: 'SWE_PROP_BC_NOTI_NEW_DATA_WS', props: { SWE_PROP_NOTI_FIELD: 'Unmapped' } },
+    ])
+    expect(sub).not.toHaveBeenCalled()
+  })
+})
+
+describe('Notifications: debug passthrough handlers', () => {
+  it('captures the noisy diagnostic notifications into skippedNotifications when debug is on', () => {
+    const { notif } = makeNotifications({ debug: true })
+    siebel!.emitBatch('Account List Applet', [{ type: 'SWE_PROP_BC_NOTI_GENERIC' }])
+    expect(notif.skippedNotifications.map((n) => n.type)).toContain('SWE_PROP_BC_NOTI_GENERIC')
+  })
+
+  it('does not attach the diagnostic handlers when debug is off', () => {
+    const { notif } = makeNotifications({ debug: false })
+    siebel!.emitBatch('Account List Applet', [{ type: 'SWE_PROP_BC_NOTI_GENERIC' }])
+    expect(notif.skippedNotifications).toHaveLength(0)
   })
 })
