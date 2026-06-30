@@ -10,4 +10,9 @@ export { default as BaseApplet } from './BaseApplet'
 export { default as PopupApplet } from './PopupApplet'
 export { default as PopupController } from './PopupController'
 export { default as Applet } from './Applet'
-export { init, getApplet, getPopup, clear } from './factory'
+export { init, getApplet, getPopup, clear, getAppletStore } from './factory'
+export {
+  createAppletStore,
+  type AppletStore,
+  type AppletSnapshot,
+} from './applet-store'

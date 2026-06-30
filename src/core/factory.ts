@@ -23,6 +23,7 @@ import type PopupApplet from './PopupApplet'
 import type BaseApplet from './BaseApplet'
 import { AppletNotFoundError } from './errors'
 import { configure, log } from './logger'
+import { createAppletStore, type AppletStore } from './applet-store'
 import type { AppletKey, BaseAppletSettings, ConnectSettings, RecordOf } from './types'
 
 /**
@@ -31,6 +32,31 @@ import type { AppletKey, BaseAppletSettings, ConnectSettings, RecordOf } from '.
  * `getApplet` / `getPopup` narrow at the boundary. Module-level state, matching the legacy `memo`.
  */
 const memo: Record<string, BaseApplet> = {}
+
+/**
+ * One {@link AppletStore} per key, built lazily on the first {@link getAppletStore} call and reused
+ * thereafter (so every React component reading the same applet shares one subscription). Torn down and
+ * dropped whenever the underlying instance is: `init` (destructive rebuild) and `clear` both call
+ * {@link dropStore} so a store never outlives its applet.
+ */
+const storeMemo = new Map<string, AppletStore>()
+
+/** Destroy and forget the memoized store for `key`, if any. Safe to call when no store exists. */
+function dropStore(key: string): void {
+  const store = storeMemo.get(key)
+  if (store) {
+    store.destroy()
+    storeMemo.delete(key)
+  }
+}
+
+/**
+ * The clean-break error for a key that was never initialised. Shared by `getApplet` / `getPopup` /
+ * `getAppletStore` / `clear` so the verbatim `[NF]` message lives in exactly one place.
+ */
+function notMemoized(key: AppletKey): AppletNotFoundError {
+  return new AppletNotFoundError(`[NF] '${String(key)}' is not found among NB instances`)
+}
 
 /**
  * Construct the applet for `key` once, then return the memoized instance on every later call. Mirrors
@@ -72,10 +98,12 @@ export function init(
 ): void {
   for (const key in memo) {
     log(`[NF] Nexus instance deleted: ${memo[key]?.appletName}`)
+    dropStore(key)
     delete memo[key]
   }
 
-  for (const [key, appletName] of Object.entries(config)) {
+  for (const key of Object.keys(config)) {
+    const appletName = config[key as AppletKey]
     if (appletName !== undefined) memoizeOnce(appletName, key, settings)
   }
 }
@@ -90,7 +118,7 @@ export function init(
 export function getApplet<K extends AppletKey>(key: K): Applet<RecordOf<K>> {
   const applet = memo[key as string]
   if (!applet) {
-    throw new AppletNotFoundError(`[NF] '${String(key)}' is not found among NB instances`)
+    throw notMemoized(key)
   }
   return applet as Applet<RecordOf<K>>
 }
@@ -105,7 +133,7 @@ export function getApplet<K extends AppletKey>(key: K): Applet<RecordOf<K>> {
 export function getPopup<K extends AppletKey>(key: K): PopupApplet<RecordOf<K>> {
   const applet = memo[key as string]
   if (!applet) {
-    throw new AppletNotFoundError(`[NF] '${String(key)}' is not found among NB instances`)
+    throw notMemoized(key)
   }
   return applet as PopupApplet<RecordOf<K>>
 }
@@ -120,11 +148,33 @@ export function clear(keys: AppletKey[]): void {
   for (const key of keys) {
     const applet = memo[key as string]
     if (!applet) {
-      throw new AppletNotFoundError(`[NF] '${String(key)}' is not found among NB instances`)
+      throw notMemoized(key)
     }
     log(`[NF] Nexus instance deleted: ${applet.appletName}`)
+    dropStore(key as string)
     delete memo[key as string]
   }
+}
+
+/**
+ * Get the memoized {@link AppletStore} for `key`, building it on first request and reusing it
+ * thereafter. The store is the observable used by the React hooks (`siebel-connect/react`); one store
+ * per key means a single BC subscription shared across every component reading that applet. Typed as
+ * `AppletStore<RecordOf<K>>` via the augmented `AppletRegistry`.
+ *
+ * @throws {AppletNotFoundError} when `key` was never initialised (same clean break as `getApplet`).
+ */
+export function getAppletStore<K extends AppletKey>(key: K): AppletStore<RecordOf<K>> {
+  const existing = storeMemo.get(key as string)
+  if (existing) return existing as AppletStore<RecordOf<K>>
+
+  const applet = memo[key as string]
+  if (!applet) {
+    throw notMemoized(key)
+  }
+  const store = createAppletStore(applet)
+  storeMemo.set(key as string, store)
+  return store as AppletStore<RecordOf<K>>
 }
 
 export { configure }
