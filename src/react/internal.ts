@@ -1,8 +1,8 @@
-// internal.ts — shared plumbing for the React hooks. Not part of the public surface.
+// internal.ts: shared plumbing for the React hooks. Not part of the public surface.
 //
 // Everything here imports core through the package's own `siebel-connect` entry (not a relative
 // `../core/*` path). Combined with `external: ['siebel-connect']` in tsup, that guarantees the react
-// bundle reuses the single core instance instead of inlining its own copy — so `getAppletStore` here
+// bundle reuses the single core instance instead of inlining its own copy, so `getAppletStore` here
 // reads the exact same factory memo a consumer initialised through `init`.
 
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/shim/with-selector'
@@ -14,7 +14,7 @@ import type { AppletKey, RecordOf, AppletSnapshot } from 'siebel-connect'
  * `selector` and re-rendering only when the projection changes under `isEqual` (default `Object.is`).
  *
  * The store's snapshot reference is stable between BC notifications, so with a slice selector plus a
- * value-based `isEqual` a component re-renders at most once per relevant notification batch — and not
+ * value-based `isEqual` a component re-renders at most once per relevant notification batch, and not
  * at all when an accepted-but-unrelated notification leaves its slice unchanged.
  */
 export function useAppletSelector<K extends AppletKey, S>(

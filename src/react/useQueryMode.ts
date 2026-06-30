@@ -1,13 +1,13 @@
-// useQueryMode.ts — enter / execute / cancel Siebel query mode from React.
+// useQueryMode.ts: enter / execute / cancel Siebel query mode from React.
 //
 // Reads the live query-mode flag from the applet store and exposes the three transitions as async
 // actions. Each transition only *invokes existing* applet/BC methods (`NewQuery`, `ExecuteQuery` via
-// `queryBySearchExpr`, `UndoQuery`) — no bridge behaviour is added or changed. The `inQueryMode` flag
+// `queryBySearchExpr`, `UndoQuery`), so no bridge behaviour is added or changed. The `inQueryMode` flag
 // reflects the store snapshot, so it updates when Siebel emits the corresponding state notification.
 
 import { useCallback } from 'react'
 import { useAppletSelector } from './internal'
-import { useAsyncAction } from './useAsyncAction'
+import { useAsyncAction, type AsyncAction } from './useAsyncAction'
 import { getApplet } from 'siebel-connect'
 import type { AppletKey } from 'siebel-connect'
 
@@ -18,7 +18,7 @@ export interface QueryMode {
   /** `true` while a transition (`enter` / `execute` / `cancel`) is in flight. */
   pending: boolean
   /** The error from the last failed transition, normalised to a `ConnectError`. */
-  error: ReturnType<typeof useAsyncAction>['error']
+  error: AsyncAction['error']
   /** Enter query mode (`NewQuery`). */
   enter: () => Promise<unknown>
   /** Run the search expression against the entered query (`ExecuteQuery`); resolves when results land. */

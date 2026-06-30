@@ -1,9 +1,9 @@
-// useAsyncAction.ts — `{ pending, error, run, reset }` for the bridge's async server operations.
+// useAsyncAction.ts: `{ pending, error, run, reset }` for the bridge's async server operations.
 //
 // Every server-touching applet method returns a Promise (`writeRecord`, `newRecord`,
 // `queryBySearchExpr`, …). This hook wraps one such call so a component can drive it from an event
 // handler and render its `pending` / `error` state without hand-rolling the same try/finally each time.
-// It does not change what the action does — it only tracks the surrounding UI state.
+// It does not change what the action does, it only tracks the surrounding UI state.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ConnectError } from 'siebel-connect'

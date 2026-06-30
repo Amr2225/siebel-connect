@@ -1,4 +1,4 @@
-// useRecordSet.ts — the applet's record set as a typed, reactive array.
+// useRecordSet.ts: the applet's record set as a typed, reactive array.
 //
 // Subscribes to the applet store and returns `RecordOf<K>[]` for the registered key, re-rendering at
 // most once per relevant BC notification batch. Records carry `_indx`, so a row handler can call

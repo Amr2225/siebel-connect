@@ -36,7 +36,7 @@ const memo: Record<string, BaseApplet> = {}
 /**
  * One {@link AppletStore} per key, built lazily on the first {@link getAppletStore} call and reused
  * thereafter (so every React component reading the same applet shares one subscription). Torn down and
- * dropped whenever the underlying instance is — `init` (destructive rebuild) and `clear` both call
+ * dropped whenever the underlying instance is: `init` (destructive rebuild) and `clear` both call
  * {@link dropStore} so a store never outlives its applet.
  */
 const storeMemo = new Map<string, AppletStore>()
@@ -48,6 +48,14 @@ function dropStore(key: string): void {
     store.destroy()
     storeMemo.delete(key)
   }
+}
+
+/**
+ * The clean-break error for a key that was never initialised. Shared by `getApplet` / `getPopup` /
+ * `getAppletStore` / `clear` so the verbatim `[NF]` message lives in exactly one place.
+ */
+function notMemoized(key: AppletKey): AppletNotFoundError {
+  return new AppletNotFoundError(`[NF] '${String(key)}' is not found among NB instances`)
 }
 
 /**
@@ -110,7 +118,7 @@ export function init(
 export function getApplet<K extends AppletKey>(key: K): Applet<RecordOf<K>> {
   const applet = memo[key as string]
   if (!applet) {
-    throw new AppletNotFoundError(`[NF] '${String(key)}' is not found among NB instances`)
+    throw notMemoized(key)
   }
   return applet as Applet<RecordOf<K>>
 }
@@ -125,7 +133,7 @@ export function getApplet<K extends AppletKey>(key: K): Applet<RecordOf<K>> {
 export function getPopup<K extends AppletKey>(key: K): PopupApplet<RecordOf<K>> {
   const applet = memo[key as string]
   if (!applet) {
-    throw new AppletNotFoundError(`[NF] '${String(key)}' is not found among NB instances`)
+    throw notMemoized(key)
   }
   return applet as PopupApplet<RecordOf<K>>
 }
@@ -140,7 +148,7 @@ export function clear(keys: AppletKey[]): void {
   for (const key of keys) {
     const applet = memo[key as string]
     if (!applet) {
-      throw new AppletNotFoundError(`[NF] '${String(key)}' is not found among NB instances`)
+      throw notMemoized(key)
     }
     log(`[NF] Nexus instance deleted: ${applet.appletName}`)
     dropStore(key as string)
@@ -162,7 +170,7 @@ export function getAppletStore<K extends AppletKey>(key: K): AppletStore<RecordO
 
   const applet = memo[key as string]
   if (!applet) {
-    throw new AppletNotFoundError(`[NF] '${String(key)}' is not found among NB instances`)
+    throw notMemoized(key)
   }
   const store = createAppletStore(applet)
   storeMemo.set(key as string, store)

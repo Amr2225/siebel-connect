@@ -1,4 +1,4 @@
-// applet-store.ts — `createAppletStore(applet)` -> `{ subscribe, getSnapshot, getServerSnapshot, destroy }`.
+// applet-store.ts: `createAppletStore(applet)` -> `{ subscribe, getSnapshot, getServerSnapshot, destroy }`.
 //
 // Phase 10 value-add (framework-agnostic, zero deps). This is the observable primitive the React
 // hooks build on, but it is not React-specific: it adapts a `BaseApplet`'s BC-notification
@@ -42,7 +42,12 @@ export interface AppletStore<T extends SiebelRecord = SiebelRecord> {
   destroy(): void
 }
 
-/** Shared empty snapshot used for the server/first-paint render. Frozen so its identity is reusable. */
+/**
+ * Shared empty snapshot used for the server/first-paint render. Frozen so its identity is reusable.
+ * Note `createAppletStore` still reads the PM eagerly at construction (see `computeSnapshot`), so full
+ * SSR relies on the applet never being initialised server-side; `getServerSnapshot` itself is the only
+ * part guaranteed not to touch `window.SiebelApp`.
+ */
 const EMPTY_SNAPSHOT: AppletSnapshot = Object.freeze({
   recordSet: Object.freeze([]) as readonly SiebelRecord[],
   currentRecord: undefined,
@@ -79,7 +84,7 @@ export function createAppletStore<T extends SiebelRecord>(applet: BaseApplet<T>)
   const listeners = new Set<() => void>()
 
   // One subscription per store. The callback is anonymous, so `Notifications` keys it by its own
-  // counter (a unique token) rather than by function name — multiple stores never collide.
+  // counter (a unique token) rather than by function name, so multiple stores never collide.
   const token: SubscriptionToken = applet.subscribe(() => {
     snapshot = computeSnapshot(applet)
     for (const listener of listeners) listener()

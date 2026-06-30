@@ -1,5 +1,5 @@
-// useApplet.ts — the all-in-one applet handle: the typed instance, its reactive snapshot, and an
-// embedded async runner.
+// useApplet.ts: the all-in-one applet handle (the typed instance, its reactive snapshot, and an
+// embedded async runner).
 //
 // This is the convenience hook. It re-renders once per BC notification batch (it reads the whole
 // snapshot), so reach for the granular `useRecordSet` / `useCurrentRecord` when a component cares

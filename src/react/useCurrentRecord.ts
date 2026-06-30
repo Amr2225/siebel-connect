@@ -1,8 +1,8 @@
-// useCurrentRecord.ts — the applet's currently selected record as a reactive slice.
+// useCurrentRecord.ts: the applet's currently selected record as a reactive slice.
 //
 // Subscribes to the applet store and returns the selected `RecordOf<K>` (or `undefined` when nothing
 // is selected). Shallow equality on the record means a component reading one field re-renders only
-// when that record's fields actually change — an accepted-but-unrelated notification is ignored.
+// when that record's fields actually change, ignoring an accepted-but-unrelated notification.
 
 import { useAppletSelector, shallowEqual } from './internal'
 import type { AppletKey, RecordOf } from 'siebel-connect'

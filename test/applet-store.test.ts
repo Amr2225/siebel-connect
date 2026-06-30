@@ -1,7 +1,7 @@
 // Behavioural tests for the framework-agnostic applet store (Phase 10). The store adapts a
 // `BaseApplet`'s BC-notification subscription into the `useSyncExternalStore` contract. These assert
 // the two properties the React layer relies on: stable snapshot identity between notifications, and a
-// fresh recompute (plus listener fan-out) on each notification batch — and that `destroy` unsubscribes.
+// fresh recompute (plus listener fan-out) on each notification batch, and that `destroy` unsubscribes.
 import { describe, it, expect, afterEach } from 'vitest'
 import { init, getApplet, getAppletStore, clear } from 'siebel-connect'
 import { createMockSiebel } from 'siebel-connect/testing'

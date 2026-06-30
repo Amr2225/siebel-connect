@@ -8,6 +8,7 @@ import {
   useApplet,
   useRecordSet,
   useCurrentRecord,
+  useQueryMode,
   useAsyncAction,
 } from 'siebel-connect/react'
 import { init, clear, getApplet, ConnectError } from 'siebel-connect'
@@ -41,7 +42,7 @@ function setup() {
 
 /**
  * Emit a BC notification batch inside `act` so React flushes any scheduled re-render. Defaults to an
- * unconditionally-accepted type (`NEW_RECORD`), so the store always recomputes its snapshot — which is
+ * unconditionally-accepted type (`NEW_RECORD`), so the store always recomputes its snapshot, which is
  * exactly what makes the "recomputed but slice unchanged → no re-render" assertions meaningful.
  */
 function emit(s: ReturnType<typeof createMockSiebel>, type = 'SWE_PROP_BC_NOTI_NEW_RECORD') {
@@ -203,6 +204,77 @@ describe('useApplet', () => {
     expect(screen.getByTestId('out').textContent).toBe('3:Acme')
     // the handle returns the same memoized instance the imperative API hands back
     expect(handleApplet).toBe(getApplet('reactList'))
+  })
+})
+
+describe('useQueryMode', () => {
+  it('enter() flips inQueryMode once the state notification lands, and toggles pending', async () => {
+    const s = setup()
+    function Probe() {
+      const { inQueryMode, pending, enter } = useQueryMode('reactList')
+      return (
+        <div>
+          <span data-testid="qm">{String(inQueryMode)}</span>
+          <span data-testid="qp">{String(pending)}</span>
+          <button onClick={() => enter()}>enter</button>
+        </div>
+      )
+    }
+    render(<Probe />)
+    expect(screen.getByTestId('qm').textContent).toBe('false')
+
+    // enter() invokes NewQuery (the mock flips IsInQueryMode on the PM). The store only observes it
+    // once Siebel emits a state notification, exactly as in the real bridge.
+    await act(async () => {
+      fireEvent.click(screen.getByText('enter'))
+    })
+    expect(screen.getByTestId('qp').textContent).toBe('false') // pending resolved
+    emit(s, 'SWE_PROP_BC_NOTI_STATE_CHANGED')
+    expect(screen.getByTestId('qm').textContent).toBe('true')
+  })
+
+  it('execute() and cancel() run without leaving pending stuck', async () => {
+    setup()
+    function Probe() {
+      const { execute, cancel, pending } = useQueryMode('reactList')
+      return (
+        <div>
+          <span data-testid="qp">{String(pending)}</span>
+          <button onClick={() => execute('Acme')}>exec</button>
+          <button onClick={() => cancel()}>cancel</button>
+        </div>
+      )
+    }
+    render(<Probe />)
+    await act(async () => {
+      fireEvent.click(screen.getByText('exec'))
+    })
+    expect(screen.getByTestId('qp').textContent).toBe('false')
+    await act(async () => {
+      fireEvent.click(screen.getByText('cancel'))
+    })
+    expect(screen.getByTestId('qp').textContent).toBe('false')
+  })
+})
+
+describe('useApplet save()', () => {
+  it('commits the current record through run and toggles pending', async () => {
+    setup()
+    function Probe() {
+      const { save, pending } = useApplet('reactList')
+      return (
+        <div>
+          <span data-testid="sp">{String(pending)}</span>
+          <button onClick={() => save()}>save</button>
+        </div>
+      )
+    }
+    render(<Probe />)
+    await act(async () => {
+      fireEvent.click(screen.getByText('save'))
+    })
+    // mock WriteRecord calls back Completed, so save resolves and pending clears
+    expect(screen.getByTestId('sp').textContent).toBe('false')
   })
 })
 
