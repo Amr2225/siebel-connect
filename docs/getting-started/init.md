@@ -1,7 +1,15 @@
+---
+title: "Initialising the factory"
+description: "Wire registry keys to Siebel applet names, then reach typed applets with getApplet / getPopup."
+---
+
 # Initialising the factory
 
 Once your applets are [typed](./typing.md), `init` wires the registry keys to their live Siebel applet
 names. After that, `getApplet` / `getPopup` hand you the memoized, fully typed wrappers.
+
+> Where to call `init`: from your React entry point, inside the Physical Renderer's mount step, before
+> `createRoot(...).render(...)`. See [Siebel setup](./siebel-setup/).
 
 ## 1. Initialise once
 
@@ -46,17 +54,11 @@ import { clear } from 'siebel-connect'
 clear(['accountList']) // forget these keys
 ```
 
-## Migrating from `NexusFactory`
+## Coming from `NexusFactory`?
 
-The factory is a **clean break** — there is no `NexusFactory` back-compat shim.
+The factory is a **clean break**: there is no `NexusFactory` back-compat shim. `init` replaces the
+object-init call, and `getApplet` / `getPopup` replace the string-lookup call. The one behaviour change
+is that an unknown key now **throws `AppletNotFoundError`** instead of returning `null` / `undefined`.
 
-| Legacy (`nexus-factory`) | `siebel-connect` | Notes |
-| ------------------------ | ---------------- | ----- |
-| `NexusFactory(configObject)` | `init(config, settings?)` | Same destructive rebuild. `config` keys are now registry-typed. |
-| `NexusFactory('accountList')` | `getApplet('accountList')` | Returns `Applet<RecordOf<K>>`, not untyped `any`. |
-| (popup key) `NexusFactory('contactsMvg')` | `getPopup('contactsMvg')` | Returns `PopupApplet<RecordOf<K>>`. |
-| `clearPopup(['k'])` | `clear(['k'])` | Same "must be memoized" guard. |
-| `createPopup(config)` | `init(config)` | Folded into `init`. |
-| returns `null` / `undefined` for an unknown key | **throws `AppletNotFoundError`** | The one intentional behaviour change. `catch` it (or check keys) instead of testing for `null`. |
-
-See [`factory`](../core/factory.md) for the full API.
+See the full [Migrating from Nexus](../migration.md) guide for the complete map, and
+[`factory`](../core/factory.md) for the API reference.

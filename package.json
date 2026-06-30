@@ -1,15 +1,28 @@
 {
   "name": "siebel-connect",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Fully-typed, React-first bridge to Siebel Open UI's Business Component layer.",
   "license": "MIT",
+  "keywords": [
+    "siebel",
+    "siebel-open-ui",
+    "nexus-bridge",
+    "nexus-factory",
+    "business-component",
+    "react",
+    "typescript",
+    "crm"
+  ],
   "type": "module",
   "sideEffects": false,
   "engines": {
     "node": ">=18"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
   ],
   "main": "./dist/core/index.cjs",
   "module": "./dist/core/index.js",
