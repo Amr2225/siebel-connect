@@ -1,5 +1,6 @@
 {
   "title": "Siebel Connect",
+  "description": "Fully-typed, React-first bridge to Siebel Open UI's Business Component layer.",
   "src": "docs",
   "out": "site",
   "base": "/",
@@ -10,5 +11,76 @@
   },
   "autoTitleFromH1": true,
   "copyCode": true,
-  "pageNavigation": true
+  "pageNavigation": true,
+  "navigation": [
+    { "title": "Overview", "path": "/", "icon": "home" },
+    {
+      "title": "Getting started",
+      "icon": "rocket",
+      "collapsible": false,
+      "children": [
+        { "title": "Installation", "path": "/getting-started/installation", "icon": "download" },
+        { "title": "Siebel setup (the PR)", "path": "/getting-started/siebel-setup", "icon": "plug" },
+        { "title": "Typing your applets", "path": "/getting-started/typing", "icon": "braces" },
+        { "title": "Initialising the factory", "path": "/getting-started/init", "icon": "power" },
+        { "title": "Quick start", "path": "/getting-started/quick-start", "icon": "zap" }
+      ]
+    },
+    {
+      "title": "Guides",
+      "icon": "book-open",
+      "collapsible": true,
+      "children": [
+        { "title": "Reading data (list & form)", "path": "/guides/reading-data", "icon": "table" },
+        { "title": "Creating records (react-hook-form)", "path": "/guides/creating-records", "icon": "file-plus" },
+        { "title": "Updating records", "path": "/guides/updating-records", "icon": "pencil" },
+        { "title": "Querying", "path": "/guides/querying", "icon": "search" },
+        { "title": "Multi-value groups (MVG)", "path": "/guides/mvg", "icon": "list-plus" },
+        { "title": "Pick applets", "path": "/guides/pick-applets", "icon": "mouse-pointer-click" }
+      ]
+    },
+    {
+      "title": "React adapter",
+      "icon": "component",
+      "collapsible": true,
+      "children": [
+        { "title": "Hooks", "path": "/react/hooks", "icon": "anchor" },
+        { "title": "Applet store", "path": "/react/store", "icon": "database" }
+      ]
+    },
+    {
+      "title": "Core API",
+      "icon": "code",
+      "collapsible": true,
+      "children": [
+        { "title": "Factory", "path": "/core/factory", "icon": "factory" },
+        { "title": "BaseApplet", "path": "/core/base-applet", "icon": "box" },
+        { "title": "Applet", "path": "/core/applet", "icon": "boxes" },
+        { "title": "PopupApplet", "path": "/core/popup-applet", "icon": "square-stack" },
+        { "title": "PopupController", "path": "/core/popup-controller", "icon": "panel-top" },
+        { "title": "Notifications", "path": "/core/notifications", "icon": "bell" },
+        { "title": "Locale data", "path": "/core/locale-data", "icon": "globe" },
+        { "title": "Errors", "path": "/core/errors", "icon": "triangle-alert" },
+        { "title": "Logging", "path": "/core/logging", "icon": "scroll-text" },
+        { "title": "Types", "path": "/core/types", "icon": "braces" }
+      ]
+    },
+    {
+      "title": "Testing",
+      "icon": "flask-conical",
+      "collapsible": true,
+      "children": [
+        { "title": "Mock Siebel harness", "path": "/testing", "icon": "test-tube" }
+      ]
+    },
+    { "title": "Migrating from Nexus", "path": "/migration", "icon": "arrow-right-left" },
+    {
+      "title": "Contributing",
+      "icon": "users",
+      "collapsible": true,
+      "children": [
+        { "title": "Testing & CI", "path": "/contributing/testing", "icon": "git-pull-request" }
+      ]
+    }
+  ]
 }
