@@ -35,10 +35,12 @@ describe('Applet: closePopupApplet', () => {
 })
 
 describe('Applet: changeRecords', () => {
-  it('opens the ChangeRecords popup without throwing', () => {
+  it('delegates to showPopupApplet with the ChangeRecords method', () => {
     setup()
     const applet = makeApplet()
-    expect(() => applet.changeRecords(false)).not.toThrow()
+    const spy = vi.spyOn(applet, 'showPopupApplet')
+    applet.changeRecords(false)
+    expect(spy).toHaveBeenCalledWith('ChangeRecords', false, undefined)
   })
 })
 

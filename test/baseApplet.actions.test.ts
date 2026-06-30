@@ -118,13 +118,14 @@ describe('BaseApplet: create / write / delete / undo', () => {
 })
 
 describe('BaseApplet: setControlValue', () => {
-  it('converts the value and fires focus/blur on the control', () => {
+  it('converts the value and fires focus/blur on the targeted control', () => {
     const { applet, pm } = makeApplet(accountListFixture)
+    const control = pm.ExecuteMethod('GetControl', 'Name') // the exact control focus/blur must target
     const spy = vi.spyOn(pm, 'OnControlEvent')
     applet.setControlValue('Name', 'Updated')
-    // focus first, then blur carrying the (string-coerced) value.
-    expect(spy).toHaveBeenNthCalledWith(1, 'PHYEVENT_CONTROL_FOCUS', expect.anything())
-    expect(spy).toHaveBeenNthCalledWith(2, 'PHYEVENT_CONTROL_BLUR', expect.anything(), 'Updated')
+    // focus first, then blur carrying the (string-coerced) value, both on the Name control.
+    expect(spy).toHaveBeenNthCalledWith(1, 'PHYEVENT_CONTROL_FOCUS', control)
+    expect(spy).toHaveBeenNthCalledWith(2, 'PHYEVENT_CONTROL_BLUR', control, 'Updated')
   })
 
   it('throws ControlNotFoundError for an unknown control', () => {
@@ -312,11 +313,12 @@ describe('BaseApplet: _retrieveData', () => {
       executeMethod: (name) => (name === 'CanInvokeMethod' ? false : undefined),
     })
     const result = applet._retrieveData(0)
+    // Narrow without a branch so the data assertions always run (a guarding `if (result)` would let a
+    // future falsy-but-not-false regression skip them silently).
     expect(result).not.toBe(false)
-    if (result) {
-      expect(result.data.map((r) => r.Id)).toEqual(['1-A', '1-B', '1-C'])
-      expect(result.hasNext).toBe(false)
-    }
+    const retrieved = result as Exclude<typeof result, false>
+    expect(retrieved.data.map((r) => r.Id)).toEqual(['1-A', '1-B', '1-C'])
+    expect(retrieved.hasNext).toBe(false)
   })
 })
 
