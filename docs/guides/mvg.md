@@ -40,7 +40,7 @@ await account.showMvgApplet('Contacts', true)
 
 // 2. operate on the popup
 const mvg = getPopup('contactsMvg') // PopupApplet<Contact>
-await mvg.positionOnRow(0) // select the contact to change
+mvg.positionOnRow(0) // select the contact to change
 mvg.setControlValue('Primary', true) // set its value
 await mvg.writeRecord() // commit once
 
@@ -77,7 +77,7 @@ const account = getApplet('accountForm')
 await account.showMvgApplet('Contacts', true)
 
 const mvg = getPopup('contactsMvg')
-await mvg.positionOnRow(0) // select an available contact
+mvg.positionOnRow(0) // select an available contact
 mvg.addRecords() // associate the selected record(s)
 
 account.closePopupApplet()
@@ -97,10 +97,16 @@ const result = await getApplet('accountList').getMVF(
   ['1-ABC', '1-DEF'], // record ids
   { Contacts: ['Last Name', 'First Name'] } // control -> fields to return
 )
-// result: { Contacts: { '1-ABC': [{ 'Last Name': 'Stark', ... }], ... } }
 ```
 
-See [`getMVF`](../core/base-applet.md#query) for the return shape.
+`result` is an `MvfResult`, a nested grouping of the returned field rows, typed as:
+
+```ts
+type MvfResult = Record<string, Record<string, Array<Record<string, unknown>>>>
+```
+
+The innermost objects are the field values you asked for (each carrying an `SSA Primary Field` flag).
+See [`getMVF`](../core/base-applet.md#query) for the method reference.
 
 ## Errors to expect
 

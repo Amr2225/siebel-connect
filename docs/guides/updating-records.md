@@ -80,7 +80,7 @@ function AccountListInlineEdit() {
   const rename = (indx: number, name: string) =>
     run(async () => {
       const applet = getApplet('accountList')
-      await applet.positionOnRow(indx) // 1. select the row
+      applet.positionOnRow(indx) // 1. select the row
       applet.setControlValue('Name', name) // 2. set the value
       return applet.writeRecord() // 3. commit once
     })

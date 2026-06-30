@@ -43,7 +43,7 @@ const pick = getPopup('accountPick') // PopupApplet<Account>
 
 // 2. find the record: query the pick list, then select it
 await pick.query({ Name: 'Acme*' })
-await pick.positionOnRow(0)
+pick.positionOnRow(0)
 
 // 3. pick it into the parent field
 pick.pickRecord()
@@ -64,7 +64,7 @@ await account.showPickApplet('Products', true)
 
 const shuttle = getPopup('productsPick') // PopupApplet<Product>
 
-await shuttle.positionOnRow(0)
+shuttle.positionOnRow(0)
 shuttle.addRecords() // associate the selected record
 
 // ...or associate everything currently listed:
@@ -82,7 +82,7 @@ For association applets, remove with `deleteRecords` (the selected record) or `d
 
 ```ts
 const shuttle = getPopup('productsPick')
-await shuttle.positionOnRow(0)
+shuttle.positionOnRow(0)
 shuttle.deleteRecords()
 ```
 
