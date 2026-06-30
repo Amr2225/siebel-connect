@@ -5,4 +5,9 @@ coverage
 .npmrc
 *.log
 
-.github
+# Keep .github out of the repo, except the CI workflow (Phase 11 deliverable). The legacy
+# publish.yml / release.yml workflows and the issue templates are revisited in Phase 12.
+.github/*
+!.github/workflows/
+.github/workflows/*
+!.github/workflows/ci.yaml

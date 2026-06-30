@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref (e.g. rapid pushes to a PR branch).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      # Runs unit + type-level (.test-d) tests and enforces the coverage thresholds in vitest.config.ts.
+      - name: Test (with coverage)
+        run: pnpm test:coverage
+
+      - name: Build (ESM + CJS + dts)
+        run: pnpm build
+
+      # Validates the published package manifest (exports map, types/CJS/ESM conditions) against the
+      # freshly-built dist. Must run after build.
+      - name: Lint package exports
+        run: pnpm lint:package
+
+      - name: Build docs
+        run: pnpm docs:build
