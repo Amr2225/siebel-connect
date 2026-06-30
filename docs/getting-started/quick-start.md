@@ -115,3 +115,5 @@ slice re-render.
 | Work with multi-value fields            | [Multi-value groups (MVG)](../guides/mvg.md)                |
 | Associate records through a pick applet | [Pick applets](../guides/pick-applets.md)                   |
 | See each hook's return shape            | [React hooks](../react/hooks.md)                            |
+| Develop with no Siebel server           | [Mock Siebel harness](../testing.md)                        |
+| Build and ship to the Siebel server     | [Building & deploying](../guides/deployment.md)             |

@@ -181,3 +181,5 @@ your standard Open UI manifest workflow and are unchanged from a plain Nexus Bri
 
 - [Type your applets](./typing/) so `getApplet('accountList')` returns `Applet<Account>`.
 - [Initialise the factory](./init/) and read your first records in the [Quick start](./quick-start/).
+- Develop without a server using the [mock Siebel harness](../testing/), then ship with
+  [Building & deploying](../guides/deployment/).

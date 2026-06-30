@@ -36,7 +36,8 @@
         { "title": "Updating records", "path": "/guides/updating-records", "icon": "pencil" },
         { "title": "Querying", "path": "/guides/querying", "icon": "search" },
         { "title": "Multi-value groups (MVG)", "path": "/guides/mvg", "icon": "list-plus" },
-        { "title": "Pick applets", "path": "/guides/pick-applets", "icon": "mouse-pointer-click" }
+        { "title": "Pick applets", "path": "/guides/pick-applets", "icon": "mouse-pointer-click" },
+        { "title": "Building & deploying", "path": "/guides/deployment", "icon": "upload-cloud" }
       ]
     },
     {
